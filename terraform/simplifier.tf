@@ -236,12 +236,12 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
     name      = "simplifier-ingress"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
-    # FIXME: https
+
     annotations = {
+      "kubernetes.io/ingress.class"                         = "traefik"
       "cert-manager.io/acme-challenge-type"                 = "http01"
       "cert-manager.io/cluster-issuer"                      = "simplifier-cluster-issuer"
       "cert-manager.io/dns-names"                           = azurerm_public_ip.simplifier.fqdn
-      "kubernetes.io/ingress.class"                         = "traefik"
       "traefik.ingress.kubernetes.io/frontend-entry-points" = "web,websecure"
       "traefik.ingress.kubernetes.io/redirect-entry-point"  = "websecure"
       "traefik.ingress.kubernetes.io/redirect-permanent"    = true
@@ -256,6 +256,7 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
       service_name = kubernetes_service.simplifier_service.metadata.0.name
       service_port = 8080
     }
+
     rule {
       host = azurerm_public_ip.simplifier.fqdn
       http {

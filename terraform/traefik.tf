@@ -1,6 +1,8 @@
 # https://github.com/traefik/traefik-helm-chart
 # https://github.com/traefik/traefik-helm-chart/issues/208#issuecomment-670872105
 # https://github.com/traefik/traefik-helm-chart/issues/42#issuecomment-563474382
+# https://github.com/traefik/traefik/issues/7126
+
 resource "helm_release" "helm_traefik" {
   name       = "traefik"
   namespace  = "traefik"
@@ -16,6 +18,19 @@ resource "helm_release" "helm_traefik" {
   timeout           = 300
 
   values = [jsonencode({
+    global = {
+      checkNewVersion    = false
+      sendAnonymousUsage = false
+    }
+
+    api = {
+      insecure = true
+    }
+
+    metrics = {
+      prometheus = false
+    }
+
     # FIXME: tag
     image = {
       tag = "2.5.5"
@@ -36,37 +51,12 @@ resource "helm_release" "helm_traefik" {
       size         = "1Gi"
     }
 
-    # volumes = [
-    #   {
-    #     name      = "tls"
-    #     mountPath = "/tls"
-    #     type      = "csi"
-    #     csi = {
-    #       driver = "csi.cert-manager.io"
-    #       volumeAttributes = {
-    #         "csi.cert-manager.io/issuer-name" = "simplifier-cluster-issuer"
-    #         "csi.cert-manager.io/dns-names"   = azurerm_public_ip.simplifier.fqdn
-    #       }
-    #       node_publish_secret_ref = {
-    #         name      = "simplifier-cluster-issuer"
-    #         namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-    #       }
-    #     }
-    #   },
+    # additionalArguments = [
+    #   "--api.insecure=true",
+    #   "--metrics.prometheus=false",
+    #   "--global.checknewversion=false",
+    #   "--global.sendanonymoususage=false",
     # ]
-
-    additionalArguments = [
-      "--api.insecure=true",
-      "--metrics.prometheus=false",
-      "--global.checknewversion=false",
-      "--global.sendanonymoususage=false",
-      # FIXME: https://github.com/traefik/traefik-helm-chart/pull/529
-      "--providers.kubernetesingress.allowExternalNameServices=true",
-      # "--certificatesresolvers.letsencrypt.acme.email=admins@simplifier.io",
-      # "--certificatesresolvers.letsencrypt.acme.httpchallenge",
-      # "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web",
-      # "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json",
-    ]
 
     logs = {
       general = {
@@ -124,9 +114,9 @@ resource "helm_release" "helm_traefik" {
 }
 
 # https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/network_policy
-resource "kubernetes_network_policy" "traefik_allow_ingress" {
+resource "kubernetes_network_policy" "simplifier_network_policy" {
   metadata {
-    name      = "${helm_release.helm_traefik.metadata.0.namespace}-allow-ingress"
+    name      = "${helm_release.helm_traefik.metadata.0.namespace}-network-policy"
     namespace = helm_release.helm_traefik.metadata.0.namespace
   }
 
@@ -181,20 +171,16 @@ resource "kubernetes_manifest" "simplifier_middleware" {
     }
 
     spec = {
-      # stripPrefix = {
-      #   prefixes = ["/simplifier"]
-      # }
       headers = {
+        #accessControlAllowOrigin      = "origin-list-or-null"
         accessControlAllowCredentials = true
         accessControlAllowHeaders     = ["simplifiertoken", "simplifierapp", "User-Agent", "Content-Type", "Range"]
         accessControlAllowMethods     = ["GET", "POST", "OPTIONS", "PATCH", "PUT"]
-        #accessControlAllowOrigin      = "origin-list-or-null"
-        # FIXME: https
-        accessControlAllowOriginList = ["ionic://localhost", "http://${azurerm_public_ip.simplifier.fqdn}"]
-        accessControlExposeHeaders   = ["remainingTokenLifetime", "Content-Length", "Content-Range"]
-        accessControlMaxAge          = 100
-        addVaryHeader                = true
-        frameDeny                    = true
+        accessControlAllowOriginList  = ["ionic://localhost", "https://${azurerm_public_ip.simplifier.fqdn}"]
+        accessControlExposeHeaders    = ["remainingTokenLifetime", "Content-Length", "Content-Range"]
+        accessControlMaxAge           = 100
+        addVaryHeader                 = true
+        frameDeny                     = true
       }
     }
   }
@@ -203,46 +189,6 @@ resource "kubernetes_manifest" "simplifier_middleware" {
   }
   depends_on = [helm_release.helm_traefik]
 }
-
-# resource "kubernetes_manifest" "simplifier_certificate" {
-#   manifest = {
-#     apiVersion = "cert-manager.io/v1"
-#     kind       = "Certificate"
-#     metadata = {
-#       name      = "simplifier-certificate"
-#       namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-#     }
-
-#     "spec" = {
-#       "commonName" = azurerm_public_ip.simplifier.fqdn
-#       "duration"   = "2160h0m0s"
-#       #"isCA"       = truesimplifier-cluster-issuer
-#       "issuerRef" = {
-#         "kind" = "ClusterIssuer"
-#         "name" = "simplifier-cluster-issuer"
-#         "group" = "cert-manager.io"
-#       }
-#       # subject = {
-#       #   "organizations" = [
-#       #     "simplifier",
-#       #   ]
-#       # }
-#       "renewBefore" = "240h0m0s"
-#       "secretName"  = "simplifier-certificate"
-#       # "usages" = [
-#       #   "cert sign",
-#       # ]
-#       "dnsNames" = [
-#         "${azurerm_public_ip.simplifier.fqdn}",
-#       ]
-#     }
-#   }
-
-#   field_manager {
-#     force_conflicts = true
-#   }
-#   depends_on = [helm_release.helm_cert_manager]
-# }
 
 resource "kubernetes_manifest" "simplifier_route" {
   manifest = {
@@ -285,7 +231,6 @@ resource "kubernetes_manifest" "simplifier_route" {
   depends_on = [helm_release.helm_traefik, kubernetes_manifest.simplifier_middleware]
 }
 
-
 resource "kubernetes_manifest" "simplifier_route_tls" {
   manifest = {
     "apiVersion" = "traefik.containo.us/v1alpha1"
@@ -297,8 +242,8 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
     "spec" = {
       # TODO: required? think not
       "tls" = {
-        "secretName"   = "simplifier-certificate"
-        "certResolver" = "letsencrypt"
+        "secretName" = "simplifier-certificate"
+        #"certResolver" = "letsencrypt"
       }
       "entryPoints" = [
         "websecure"

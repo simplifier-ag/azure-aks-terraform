@@ -7,7 +7,7 @@
 Install prerequisites:
 
 ```shell
-$ brew install azure-cli helm kubectl terraform 
+$ brew install azure-cli git git-lfs helm kubectl terraform 
 ```
 
 Initialize:

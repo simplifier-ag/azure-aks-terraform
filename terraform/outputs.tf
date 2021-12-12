@@ -35,13 +35,12 @@ output "aks_cluster_kubernetes_version" {
   value = azurerm_kubernetes_cluster.aks_cluster.kubernetes_version
 }
 
-output "azurerm_public_ip_address" {
+output "simplifier_ip_address" {
   value = azurerm_public_ip.simplifier.ip_address
 }
 
-output "azurerm_public_fqdn" {
-  value       = azurerm_public_ip.simplifier.fqdn
-  description = "the dns name of the publicly accessible host"
+output "simplifier_fqdn" {
+  value = azurerm_dns_a_record.simplifier_dns_a_record.fqdn
 }
 
 output "mariadb_fqdn" {
