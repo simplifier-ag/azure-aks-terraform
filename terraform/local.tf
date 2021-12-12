@@ -22,6 +22,18 @@ resource "null_resource" "az_feature_custom_node_config_preview" {
   }
 }
 
+resource "null_resource" "az_feature_aks_natgateway_preview" {
+  provisioner "local-exec" {
+    command = "az feature register --namespace \"Microsoft.ContainerService\" --name \"AKS-NATGatewayPreview\""
+  }
+}
+
+resource "null_resource" "az_feature_pod_security_policy_preview" {
+  provisioner "local-exec" {
+    command = "az feature register --namespace \"Microsoft.ContainerService\" --name \"PodSecurityPolicyPreview\""
+  }
+}
+
 resource "null_resource" "az_feature_encryption_at_host" {
   provisioner "local-exec" {
     command = "az feature register --namespace \"Microsoft.Compute\" --name \"EncryptionAtHost\""

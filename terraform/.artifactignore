@@ -1,1 +1,5 @@
 .terraform
+.terraform.lock.hcl
+.envrc
+TODO.md
+README.md

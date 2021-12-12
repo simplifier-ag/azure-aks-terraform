@@ -16,7 +16,7 @@ terraform {
     # https://registry.terraform.io/providers/hashicorp/azurerm/latest
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 2.88.1"
+      version = "~> 2.89.0"
     }
     # https://registry.terraform.io/providers/microsoft/azuredevops/latest
     azuredevops = {
@@ -48,18 +48,28 @@ provider "azuredevops" {
   org_service_url = "https://dev.azure.com/simplifierag"
 }
 
+# provider "kubernetes" {
+#   host                   = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
+#   client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_certificate)
+#   client_key             = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_key)
+#   cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.cluster_ca_certificate)
+# }
+
 provider "kubernetes" {
-  host                   = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
-  client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_certificate)
-  client_key             = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_key)
-  cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.cluster_ca_certificate)
+  config_path = ".kubeconfig"
 }
+
+# provider "helm" {
+#   kubernetes {
+#     host                   = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
+#     client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_certificate)
+#     client_key             = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_key)
+#     cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.cluster_ca_certificate)
+#   }
+# }
 
 provider "helm" {
   kubernetes {
-    host                   = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
-    client_certificate     = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_certificate)
-    client_key             = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.client_key)
-    cluster_ca_certificate = base64decode(azurerm_kubernetes_cluster.aks_cluster.kube_config.0.cluster_ca_certificate)
+    config_path = ".kubeconfig"
   }
 }

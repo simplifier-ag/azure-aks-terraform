@@ -11,7 +11,7 @@ resource "kubernetes_namespace" "simplifier_namespace" {
 
 resource "kubernetes_secret" "simplifier_secret" {
   metadata {
-    name      = "${local.settings.customer}-${local.settings.environment}-secret"
+    name      = "simplifier-secret"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
   }
@@ -27,14 +27,15 @@ resource "kubernetes_secret" "simplifier_secret" {
 # https://community.simplifier.io/doc/installation-instructions/installation/docker-image-configuration/
 resource "kubernetes_stateful_set" "simplifier_stateful_set" {
   metadata {
-    name      = "${local.settings.customer}-${local.settings.environment}-set"
+    # TODO: rename
+    name      = "simplifier-set"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-    labels    = local.tags
+    labels    = merge(local.tags, local.additional_set_tags)
   }
 
   timeouts {
-    create = "30m"
-    update = "30m"
+    create = "10m"
+    update = "10m"
   }
 
   spec {
@@ -62,6 +63,7 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         labels = local.tags
       }
       spec {
+        # TODO: try xfs
         storage_class_name = "managed-csi-premium"
         access_modes       = ["ReadWriteOnce"]
         # storage_class_name = "simplifier-many"
@@ -80,7 +82,7 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         annotations = {}
       }
       spec {
-        #termination_grace_period_seconds = 300
+        termination_grace_period_seconds = 300
         container {
           name                       = "simplifier-app"
           image                      = local.settings.image
@@ -99,6 +101,10 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
             }
           }
 
+          port {
+            container_port = 8080
+          }
+
           env {
             name  = "PLUGINLIST"
             value = "keyValueStorePlugin,pdfPlugin,captcha,contentRepoPlugin,jsonStore"
@@ -115,6 +121,7 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
             name  = "MYSQL_PORT"
             value = "3306"
           }
+          # FIXME: Cannot enable Cluster Mode: configuration value [26235c64-9222-45a3-a0c4-7085beb28c9d] for [current_cluster_member_name] is invalid
           env {
             name = "CLUSTER_MEMBER_NAME"
             value_from {
@@ -202,70 +209,69 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
 
 resource "kubernetes_service" "simplifier_service" {
   metadata {
-    name      = "${local.settings.customer}-${local.settings.environment}-service"
+    name      = "simplifier-service"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
+    # same subnet, please
+    annotations = {
+      "service.beta.kubernetes.io/azure-load-balancer-internal" = "true"
+    }
   }
   spec {
-    type             = "LoadBalancer"
-    load_balancer_ip = azurerm_public_ip.simplifier.ip_address
-    #type = "NodePort"
+    type = "ClusterIP"
+
+    port {
+      port        = 8080
+      target_port = 8080
+    }
 
     selector = {
       k8s-app = local.tags.k8s-app
-    }
-    port {
-      port = 80
-      target_port = 8080
     }
   }
 }
 
 resource "kubernetes_ingress" "simplifier_traefik_ingress" {
   metadata {
-    name      = "${local.settings.customer}-${local.settings.environment}-traefik-ingress"
+    name      = "simplifier-ingress"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
+    # FIXME: https
     annotations = {
-      "kubernetes.io/ingress.class"                      = "traefik"
-      "traefik.ingress.kubernetes.io/redirect-permanent" = "false"
+      "cert-manager.io/acme-challenge-type"                 = "http01"
+      "cert-manager.io/cluster-issuer"                      = "simplifier-cluster-issuer"
+      "cert-manager.io/dns-names"                           = azurerm_public_ip.simplifier.fqdn
+      "kubernetes.io/ingress.class"                         = "traefik"
+      "traefik.ingress.kubernetes.io/frontend-entry-points" = "web,websecure"
+      "traefik.ingress.kubernetes.io/redirect-entry-point"  = "websecure"
+      "traefik.ingress.kubernetes.io/redirect-permanent"    = true
+      "traefik.ingress.kubernetes.io/router.entrypoints"    = "web,websecure"
+      "traefik.ingress.kubernetes.io/router.middlewares"    = "testing-dev-simplifier-middleware@kubernetescrd"
+      "traefik.ingress.kubernetes.io/router.tls"            = true
     }
   }
+
   spec {
     backend {
       service_name = kubernetes_service.simplifier_service.metadata.0.name
-      service_port = 80
+      service_port = 8080
     }
     rule {
       host = azurerm_public_ip.simplifier.fqdn
       http {
         path {
-          path = "/*"
+          path = "/"
           backend {
             service_name = kubernetes_service.simplifier_service.metadata.0.name
-            service_port = 80
+            service_port = 8080
           }
         }
       }
     }
-  }
-  depends_on = [
-    helm_release.helm_traefik
-  ]
-}
 
-# resource "kubernetes_pod_disruption_budget" "simplifier_pdb" {
-#   metadata {
-#     name      = "${local.settings.customer}-${local.settings.environment}-pdb"
-#     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-#     labels    = local.tags
-#   }
-#   spec {
-#     max_unavailable = "50%"
-#     selector {
-#       match_labels = {
-#         k8s-app = local.tags.k8s-app
-#       }
-#     }
-#   }
-# }
+    tls {
+      hosts       = ["${azurerm_public_ip.simplifier.fqdn}"]
+      secret_name = "simplifier-certificate"
+    }
+  }
+}

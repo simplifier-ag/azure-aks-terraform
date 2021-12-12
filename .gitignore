@@ -1,4 +1,6 @@
-.idea
-.terraform
+**/.terraform/*
 *.tfstate
-*.tfstate.backup
+*.tfstate.*
+*.DS_Store
+.idea
+TODO.md

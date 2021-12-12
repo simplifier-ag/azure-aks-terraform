@@ -1,3 +1,7 @@
+output "git_repo_rev" {
+  value = local.repo_rev
+}
+
 output "resource_group_name" {
   value = azurerm_resource_group.resource_group.name
 }
@@ -10,13 +14,25 @@ output "aks_cluster_fqdn" {
   value = azurerm_kubernetes_cluster.aks_cluster.fqdn
 }
 
-output "aks_host" {
+output "aks_api_host" {
   value = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
 }
 
 output "aks_kube_config" {
   value     = azurerm_kubernetes_cluster.aks_cluster.kube_config
   sensitive = true
+}
+
+output "aks_versions" {
+  value = data.azurerm_kubernetes_service_versions.current.versions
+}
+
+output "aks_latest_version" {
+  value = data.azurerm_kubernetes_service_versions.current.latest_version
+}
+
+output "aks_cluster_kubernetes_version" {
+  value = azurerm_kubernetes_cluster.aks_cluster.kubernetes_version
 }
 
 output "azurerm_public_ip_address" {

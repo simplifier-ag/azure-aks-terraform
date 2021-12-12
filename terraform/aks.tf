@@ -1,3 +1,8 @@
+module "addons" {
+  source  = "particuleio/addons/kubernetes"
+  version = "2.39.0"
+}
+
 data "azurerm_kubernetes_service_versions" "current" {
   location        = azurerm_resource_group.resource_group.location
   include_preview = false
@@ -21,6 +26,8 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     }
   }
 
+  # TODO: https://docs.microsoft.com/en-us/azure/aks/use-pod-security-policies
+
   default_node_pool {
     name                 = "default"
     orchestrator_version = data.azurerm_kubernetes_service_versions.current.latest_version
@@ -34,16 +41,19 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     tags        = local.tags
     node_labels = local.tags
 
-    availability_zones  = [1]
+    #availability_zones  = ["1", "2"]
+    #type                = "VirtualMachineScaleSets"
+    availability_zones  = ["1"]
     node_count          = 1
     min_count           = 1
-    max_count           = 3
+    max_count           = 4
     enable_auto_scaling = true
 
     linux_os_config {
       sysctl_config {
-        fs_file_max           = 12000500
-        fs_nr_open            = 20000500
+        fs_file_max = 12000500
+        fs_nr_open  = 20000500
+        #net_core_somaxconn    = 1620000
         net_ipv4_tcp_tw_reuse = true
         vm_swappiness         = 0
       }
@@ -58,8 +68,27 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
   network_profile {
     network_plugin    = "azure"
+    network_policy    = "azure"
     load_balancer_sku = "Standard"
+    network_mode      = "transparent"
+
+    # outbound_type = "managedNATGateway"
+    # nat_gateway_profile {
+    #   managed_outbound_ip_count = 1
+    # }
+
+    outbound_type = "loadBalancer"
+    load_balancer_profile {
+      #outbound_ip_address_ids = [azurerm_public_ip.simplifier.id]
+      managed_outbound_ip_count = 1
+      outbound_ports_allocated  = 32
+    }
   }
+
+  # network_profile {
+  #   network_plugin    = "kubenet"
+  #   load_balancer_sku = "Standard"
+  # }
 
   role_based_access_control {
     enabled = false
@@ -81,7 +110,6 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
       enabled = true
     }
     http_application_routing {
-      # FIXME: disable
       enabled = false
     }
     ingress_application_gateway {
@@ -104,4 +132,20 @@ resource "local_file" "aks_kubeconfig" {
   depends_on      = [azurerm_kubernetes_cluster.aks_cluster]
 }
 
-# TODO: https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/pod_disruption_budget
+# TODO: https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/limit_range
+
+# resource "kubernetes_pod_disruption_budget" "simplifier_pdb" {
+#   metadata {
+#     name      = "${local.settings.customer}-${local.settings.environment}-pdb"
+#     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
+#     labels    = local.tags
+#   }
+#   spec {
+#     max_unavailable = "50%"
+#     selector {
+#       match_labels = {
+#         k8s-app = local.tags.k8s-app
+#       }
+#     }
+#   }
+# }

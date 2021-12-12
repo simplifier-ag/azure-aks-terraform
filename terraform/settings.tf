@@ -1,4 +1,7 @@
 locals {
+  # FIXME: move directory around
+  repo_rev = trimspace(file("../.git/${trimspace(trimprefix(file("../.git/HEAD"), "ref:"))}"))
+
   default = {
     environment = terraform.workspace
 
@@ -13,8 +16,6 @@ locals {
     os_disk_size_gb = 30
     subscription_id = ""
 
-    # TODO: enable
-    #repo_rev = trimspace(file(".git/${trimspace(trimprefix(file(".git/HEAD"), "ref:"))}"))
   }
 
   # ingest yaml at 'environments/workspace.yaml' for per-environment settings
@@ -45,4 +46,11 @@ locals {
     environment = lower(local.settings.environment)
     k8s-app     = "${local.current.customer}-${local.current.environment}"
   }
+
+  additional_set_tags = {
+    "kubernetes.io/cluster-service"   = "true"
+    "addonmanager.kubernetes.io/mode" = "Reconcile"
+    "git-rev"                         = local.repo_rev
+  }
+
 }
