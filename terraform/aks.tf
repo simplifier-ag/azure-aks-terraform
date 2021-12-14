@@ -34,7 +34,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     enable_host_encryption = true
     ultra_ssd_enabled      = true
     os_disk_size_gb        = local.settings.os_disk_size_gb
-    # TODO: test
+    # TODO: test and enable?
     #os_disk_type   = "Ephemeral"
     vm_size        = local.settings.linux_nodes_sku
     vnet_subnet_id = azurerm_subnet.simplifier.id
@@ -42,6 +42,7 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     tags        = local.tags
     node_labels = local.tags
 
+    # TODO: test and enable?
     #availability_zones  = ["1", "2"]
     #type                = "VirtualMachineScaleSets"
     availability_zones  = ["1"]

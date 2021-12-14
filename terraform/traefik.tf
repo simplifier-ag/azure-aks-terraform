@@ -200,12 +200,6 @@ resource "kubernetes_manifest" "simplifier_route" {
         {
           "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`) || Host(`${local.settings.fqdn}`)"
           "kind"  = "Rule"
-          # "middlewares" = [
-          #   {
-          #     "name"      = "simplifier-middleware"
-          #     "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
-          #   }
-          # ]
           "services" = [
             {
               "name"      = kubernetes_service.simplifier_service.metadata.0.name
@@ -246,12 +240,6 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
         {
           "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`) || Host(`${local.settings.fqdn}`)"
           "kind"  = "Rule"
-          # "middlewares" = [
-          #   {
-          #     "name"      = "simplifier-middleware"
-          #     "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
-          #   }
-          # ]
           "services" = [
             {
               "name"      = kubernetes_service.simplifier_service.metadata.0.name

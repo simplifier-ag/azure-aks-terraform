@@ -1,4 +1,4 @@
-resource "kubernetes_namespace" "simplifier_namespace" {
+disk "kubernetes_namespace" "simplifier_namespace" {
   metadata {
     name = "${local.settings.customer}-${local.settings.environment}"
     annotations = {
@@ -12,6 +12,7 @@ resource "kubernetes_namespace" "simplifier_namespace" {
 resource "kubernetes_limit_range" "aks_limit_range" {
   metadata {
     name      = "${local.settings.name}-limit-range"
+    # limit range in context of namespace
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
   }
@@ -111,13 +112,15 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         labels = local.tags
       }
       spec {
-        # TODO: try xfs
-        # storage_class_name = "simplifier-xfs"
-        # access_modes       = ["ReadWriteOnce"]
         storage_class_name = "managed-csi-premium"
         access_modes       = ["ReadWriteOnce"]
+
+        # storage_class_name = "simplifier-xfs"
+        # access_modes       = ["ReadWriteOnce"]
+
         # storage_class_name = "simplifier-many"
         # access_modes       = ["ReadWriteMany"]
+
         resources {
           requests = {
             storage = "100Gi"
@@ -290,7 +293,7 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
       "cert-manager.io/cluster-issuer"                      = "simplifier-cluster-issuer"
       "cert-manager.io/dns-names"                           = "${local.settings.fqdn},${azurerm_public_ip.simplifier.fqdn}"
       "traefik.ingress.kubernetes.io/frontend-entry-points" = "web,websecure"
-      # TODO: check
+      # FIXME: redirection not working
       "traefik.ingress.kubernetes.io/redirect-entry-point" = "web"
       "traefik.ingress.kubernetes.io/redirect-permanent"   = true
       "traefik.ingress.kubernetes.io/router.entrypoints"   = "web,websecure"

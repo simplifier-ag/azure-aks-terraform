@@ -1,4 +1,4 @@
-# AKS
+# Simplifier on AKS
 
 **work in progress!**
 
@@ -7,7 +7,7 @@
 Install prerequisites:
 
 ```shell
-$ brew install azure-cli git git-lfs helm kubectl terraform 
+$ brew install azure-cli git helm kubectl terraform 
 ```
 
 Initialize:
@@ -66,3 +66,39 @@ The output will only have a `Server Version` line if the cluster is accessible.
 ```shell
 $ kubectl port-forward $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000 -n traefik
 ````
+
+---
+
+```shell
+kubectl port-forward (kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000 -n traefik
+
+#
+
+kubectl delete -n traefik IngressRoute traefik-dashboard
+kubectl delete -n testing-dev Ingress simplifier-traefik-ingress
+
+#
+
+helm delete -n traefik traefik
+
+kubectl delete -n testing-dev Middleware simplifier-middleware
+kubectl delete -n testing-dev IngressRoute simplifier-route
+kubectl delete -n testing-dev IngressRoute simplifier-route-tls
+kubectl delete -n testing-dev Ingress simplifier-ingress
+kubectl delete -n testing-dev Certificate simplifier-certificate
+
+helm delete -n cert-manager cert-manager
+kubectl delete ClusterIssuer simplifier-cluster-issuer
+
+#
+
+terraform apply -target=azurerm_kubernetes_cluster.aks_cluster
+terraform apply -auto-approve -target=local_file.aks_kubeconfig
+terraform apply -auto-approve -target=helm_release.helm_cert_manager
+terraform apply -auto-approve -target=helm_release.helm_traefik
+terraform apply
+
+#
+
+terraform state rm kubernetes_ingress.simplifier_traefik_ingress kubernetes_manifest.simplifier_middleware kubernetes_manifest.simplifier_route kubernetes_namespace.simplifier_namespace kubernetes_pod_disruption_budget.simplifier_pdb kubernetes_secret.simplifier_secret kubernetes_secret.simplifier_secret kubernetes_service.simplifier_service kubernetes_stateful_set.simplifier_stateful_set
+```

@@ -31,6 +31,7 @@ terraform {
     }
   }
 
+  # TODO: can this take variables, somehow?
   backend "azurerm" {
     subscription_id      = "7b1e7ea6-c85c-4cb9-b358-fa9d61807ce7"
     resource_group_name  = "terraform-aks"
