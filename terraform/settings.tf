@@ -5,17 +5,18 @@ locals {
   default = {
     environment = terraform.workspace
 
+    name            = ""
+    dns_prefix      = ""
+    subscription_id = ""
+
+    # TODO: gather from user identity
     creator         = "DevOp"
     customer        = "testing"
-    dns_prefix      = ""
     dns_suffix      = "aks.simplifier.io"
     image           = "simplifierag/runtime:6.5"
     linux_nodes_sku = "Standard_B4ms"
     location        = "westeurope"
-    name            = ""
     os_disk_size_gb = 30
-    subscription_id = ""
-
   }
 
   # ingest yaml at 'environments/workspace.yaml' for per-environment settings
@@ -23,12 +24,15 @@ locals {
 
   settings = {
     # compose
-    name       = "aks-${local.current.customer}-${lower(local.current.environment)}"
-    dns_prefix = "${local.current.customer}-${lower(local.current.environment)}"
+    name = "aks-${local.current.customer}-${lower(local.current.environment)}"
+
+    dns_suffix = local.current.dns_suffix
+    dns_prefix = "${lower(local.current.customer)}-${lower(local.current.environment)}"
+    fqdn       = "${lower(local.current.customer)}-${lower(local.current.environment)}.${local.current.dns_suffix}"
+
     # copy
     creator         = local.current.creator
     customer        = local.current.customer
-    dns_suffix      = local.current.dns_suffix
     environment     = local.current.environment
     image           = local.current.image
     linux_nodes_sku = local.current.linux_nodes_sku
@@ -48,9 +52,9 @@ locals {
   }
 
   additional_set_tags = {
-    "kubernetes.io/cluster-service"   = "true"
-    "addonmanager.kubernetes.io/mode" = "Reconcile"
     "git-rev"                         = local.repo_rev
+    "addonmanager.kubernetes.io/mode" = "Reconcile"
+    "kubernetes.io/cluster-service"   = "true"
   }
 
 }

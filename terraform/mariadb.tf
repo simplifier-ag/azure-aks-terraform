@@ -10,20 +10,16 @@ resource "azurerm_mariadb_server" "simplifier_mariadb" {
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
 
-  # TODO: abstraction
-  sku_name = "GP_Gen5_4"
-  version  = "10.3"
-
-  administrator_login          = "simplifieradmin"
-  administrator_login_password = random_string.mariadb_password.result
-
+  administrator_login           = "simplifieradmin"
+  administrator_login_password  = random_string.mariadb_password.result
+  auto_grow_enabled             = true
+  backup_retention_days         = 7
+  geo_redundant_backup_enabled  = false
   public_network_access_enabled = false
+  sku_name                      = "GP_Gen5_4"
   ssl_enforcement_enabled       = false
-
-  auto_grow_enabled            = true
-  backup_retention_days        = 7
-  geo_redundant_backup_enabled = false
-  storage_mb                   = 5120
+  storage_mb                    = 5120
+  version                       = "10.3"
 
   tags = local.tags
 }
@@ -60,6 +56,7 @@ resource "azurerm_mariadb_configuration" "max_allowed_packet" {
   value               = "1073741824"
 }
 
+# required to allow the pods to access the mariadb server (link subnets)
 resource "azurerm_private_endpoint" "simplifier_mariadb" {
   name                = "${local.settings.customer}-${local.settings.environment}-pe"
   location            = azurerm_resource_group.resource_group.location
@@ -70,6 +67,7 @@ resource "azurerm_private_endpoint" "simplifier_mariadb" {
     name                           = "${local.settings.customer}-${local.settings.environment}-psc"
     private_connection_resource_id = azurerm_mariadb_server.simplifier_mariadb.id
     subresource_names              = ["mariadbServer"]
-    is_manual_connection           = false
+    # confirm resource creation automatically
+    is_manual_connection = false
   }
 }

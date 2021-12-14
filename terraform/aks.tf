@@ -1,8 +1,3 @@
-module "addons" {
-  source  = "particuleio/addons/kubernetes"
-  version = "2.39.0"
-}
-
 data "azurerm_kubernetes_service_versions" "current" {
   location        = azurerm_resource_group.resource_group.location
   include_preview = false
@@ -12,11 +7,14 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   name                = local.settings.name
   location            = azurerm_resource_group.resource_group.location
   resource_group_name = azurerm_resource_group.resource_group.name
-  dns_prefix          = local.settings.dns_prefix
   tags                = local.tags
+
+  dns_prefix = local.settings.dns_prefix
 
   kubernetes_version        = data.azurerm_kubernetes_service_versions.current.latest_version
   automatic_channel_upgrade = "stable"
+  # TODO: abstraction (devel..prod)
+  #sku_tier                  = "Paid"
 
   # TODO: abstraction
   maintenance_window {
@@ -29,14 +27,17 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   # TODO: https://docs.microsoft.com/en-us/azure/aks/use-pod-security-policies
 
   default_node_pool {
-    name                 = "default"
+    name = "default"
+    # allow auto-upgrade
     orchestrator_version = data.azurerm_kubernetes_service_versions.current.latest_version
 
     enable_host_encryption = true
     ultra_ssd_enabled      = true
     os_disk_size_gb        = local.settings.os_disk_size_gb
-    vm_size                = local.settings.linux_nodes_sku
-    vnet_subnet_id         = azurerm_subnet.simplifier.id
+    # TODO: test
+    #os_disk_type   = "Ephemeral"
+    vm_size        = local.settings.linux_nodes_sku
+    vnet_subnet_id = azurerm_subnet.simplifier.id
 
     tags        = local.tags
     node_labels = local.tags
@@ -51,9 +52,8 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
     linux_os_config {
       sysctl_config {
-        fs_file_max = 12000500
-        fs_nr_open  = 20000500
-        #net_core_somaxconn    = 1620000
+        fs_file_max           = 12000500
+        fs_nr_open            = 20000500
         net_ipv4_tcp_tw_reuse = true
         vm_swappiness         = 0
       }
@@ -67,28 +67,22 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   }
 
   network_profile {
-    network_plugin    = "azure"
-    network_policy    = "azure"
+    # https://docs.microsoft.com/en-us/azure/aks/concepts-network#azure-virtual-networks
+    network_plugin = "azure"
+    network_policy = "azure"
+
     load_balancer_sku = "Standard"
-    network_mode      = "transparent"
-
-    # outbound_type = "managedNATGateway"
-    # nat_gateway_profile {
-    #   managed_outbound_ip_count = 1
-    # }
-
+    # https://docs.microsoft.com/en-us/azure/aks/faq#transparent-mode
+    network_mode  = "transparent"
     outbound_type = "loadBalancer"
+
     load_balancer_profile {
-      #outbound_ip_address_ids = [azurerm_public_ip.simplifier.id]
+      # https://docs.microsoft.com/en-us/azure/aks/load-balancer-standard#configure-the-allocated-outbound-ports
       managed_outbound_ip_count = 1
       outbound_ports_allocated  = 32
+      idle_timeout_in_minutes   = 5
     }
   }
-
-  # network_profile {
-  #   network_plugin    = "kubenet"
-  #   load_balancer_sku = "Standard"
-  # }
 
   role_based_access_control {
     enabled = false
@@ -105,10 +99,6 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     aci_connector_linux {
       enabled = false
     }
-    # TODO: https://docs.microsoft.com/en-ie/azure/governance/policy/concepts/policy-for-kubernetes
-    azure_policy {
-      enabled = true
-    }
     http_application_routing {
       enabled = false
     }
@@ -118,11 +108,19 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     kube_dashboard {
       enabled = false
     }
+    # https://docs.microsoft.com/en-ie/azure/governance/policy/concepts/policy-for-kubernetes
+    azure_policy {
+      enabled = true
+    }
     oms_agent {
       enabled                    = true
       log_analytics_workspace_id = azurerm_log_analytics_workspace.aks_logworkspace.id
     }
   }
+
+  depends_on = [
+    azurerm_user_assigned_identity.aks_identity
+  ]
 }
 
 resource "local_file" "aks_kubeconfig" {
@@ -131,21 +129,3 @@ resource "local_file" "aks_kubeconfig" {
   file_permission = "0600"
   depends_on      = [azurerm_kubernetes_cluster.aks_cluster]
 }
-
-# TODO: https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/limit_range
-
-# resource "kubernetes_pod_disruption_budget" "simplifier_pdb" {
-#   metadata {
-#     name      = "${local.settings.customer}-${local.settings.environment}-pdb"
-#     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-#     labels    = local.tags
-#   }
-#   spec {
-#     max_unavailable = "50%"
-#     selector {
-#       match_labels = {
-#         k8s-app = local.tags.k8s-app
-#       }
-#     }
-#   }
-# }

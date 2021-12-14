@@ -4,23 +4,32 @@
 # https://github.com/traefik/traefik/issues/7126
 
 resource "helm_release" "helm_traefik" {
-  name       = "traefik"
-  namespace  = "traefik"
-  repository = "https://helm.traefik.io/traefik"
-  chart      = "traefik"
-  # FIXME: for now
-  atomic = true
-  #cleanup_on_fail   = true
-  recreate_pods     = true
+  name              = "traefik"
+  namespace         = "traefik"
+  repository        = "https://helm.traefik.io/traefik"
+  chart             = "traefik"
+  atomic            = true
   create_namespace  = true
   dependency_update = true
   max_history       = 5
   timeout           = 300
+  #recreate_pods     = true
 
   values = [jsonencode({
+    # FIXME: tag
+    image = {
+      tag = "2.5.5"
+    }
+
     global = {
       checkNewVersion    = false
       sendAnonymousUsage = false
+    }
+
+    logs = {
+      general = {
+        level = "INFO"
+      }
     }
 
     api = {
@@ -29,39 +38,6 @@ resource "helm_release" "helm_traefik" {
 
     metrics = {
       prometheus = false
-    }
-
-    # FIXME: tag
-    image = {
-      tag = "2.5.5"
-    }
-
-    service = {
-      type = "LoadBalancer"
-      spec = {
-        loadBalancerIP = azurerm_public_ip.simplifier.ip_address
-      }
-    }
-
-    persistence = {
-      enabled      = true
-      storageClass = "simplifier-certs"
-      accessMode   = "ReadWriteMany"
-      subPath      = "traefik"
-      size         = "1Gi"
-    }
-
-    # additionalArguments = [
-    #   "--api.insecure=true",
-    #   "--metrics.prometheus=false",
-    #   "--global.checknewversion=false",
-    #   "--global.sendanonymoususage=false",
-    # ]
-
-    logs = {
-      general = {
-        level = "INFO"
-      }
     }
 
     ports = {
@@ -73,29 +49,53 @@ resource "helm_release" "helm_traefik" {
       }
     }
 
+    service = {
+      type = "LoadBalancer"
+      spec = {
+        loadBalancerIP = azurerm_public_ip.simplifier.ip_address
+      }
+    }
+
     providers = {
       kubernetesIngress = {
         enabled = true
         #allowExternalNameServices = true
-        namespaces = []
+        namespaces = [] # all
       }
       kubernetesCRD = {
-        enabled                   = true
-        ingressClass              = "traefik"
-        allowCrossNamespace       = true
-        allowExternalNameServices = true
-        namespaces                = []
+        enabled      = true
+        ingressClass = "traefik"
+        # yes, we cross namespaces
+        allowCrossNamespace = true
+        #allowExternalNameServices = true
+        namespaces = [] # all
       }
     }
 
+    # persistence = {
+    #   enabled      = true
+    #   storageClass = "simplifier-certs"
+    #   accessMode   = "ReadWriteMany"
+    #   subPath      = "traefik"
+    #   size         = "1Gi"
+    # }
+
+    # additionalArguments = [
+    #   "--api.insecure=true",
+    #   "--metrics.prometheus=false",
+    #   "--global.checknewversion=false",
+    #   "--global.sendanonymoususage=false",
+    # ]
+
+    # allow binding ports below 1024 - traefik is our external load balancer
     securityContext = {
       capabilities = {
         drop = ["ALL"]
         add  = ["NET_BIND_SERVICE"]
       }
+      runAsNonRoot           = false
       readOnlyRootFilesystem = true
       runAsGroup             = 0
-      runAsNonRoot           = false
       runAsUser              = 0
     }
 
@@ -110,9 +110,10 @@ resource "helm_release" "helm_traefik" {
       # }
     }
   })]
-  depends_on = [local_file.aks_kubeconfig, kubernetes_storage_class.simplifier_certs]
+  depends_on = [local_file.aks_kubeconfig]
 }
 
+# https://kubernetes.io/docs/concepts/services-networking/network-policies/
 # https://registry.terraform.io/providers/hashicorp/kubernetes/latest/docs/resources/network_policy
 resource "kubernetes_network_policy" "simplifier_network_policy" {
   metadata {
@@ -139,21 +140,14 @@ resource "kubernetes_network_policy" "simplifier_network_policy" {
         protocol = "TCP"
       }
 
-      from {
-        namespace_selector {
-          match_labels = {
-            name = local.settings.dns_prefix
-          }
-        }
-      }
-
-      from {
-        ip_block {
-          cidr = "0.0.0.0/0"
-        }
-      }
+      # from {
+      #   ip_block {
+      #     cidr = "0.0.0.0/0"
+      #   }
+      # }
     }
 
+    # allow all
     egress {}
 
     policy_types = ["Ingress", "Egress"]
@@ -176,7 +170,7 @@ resource "kubernetes_manifest" "simplifier_middleware" {
         accessControlAllowCredentials = true
         accessControlAllowHeaders     = ["simplifiertoken", "simplifierapp", "User-Agent", "Content-Type", "Range"]
         accessControlAllowMethods     = ["GET", "POST", "OPTIONS", "PATCH", "PUT"]
-        accessControlAllowOriginList  = ["ionic://localhost", "https://${azurerm_public_ip.simplifier.fqdn}"]
+        accessControlAllowOriginList  = ["ionic://localhost", "https://${azurerm_public_ip.simplifier.fqdn}", "https://${local.settings.fqdn}"]
         accessControlExposeHeaders    = ["remainingTokenLifetime", "Content-Length", "Content-Range"]
         accessControlMaxAge           = 100
         addVaryHeader                 = true
@@ -195,8 +189,8 @@ resource "kubernetes_manifest" "simplifier_route" {
     "apiVersion" = "traefik.containo.us/v1alpha1"
     "kind"       = "IngressRoute"
     "metadata" = {
-      name      = "simplifier-route"
-      namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
+      "name"      = "simplifier-route"
+      "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
     }
     "spec" = {
       "entryPoints" = [
@@ -204,14 +198,14 @@ resource "kubernetes_manifest" "simplifier_route" {
       ]
       "routes" = [
         {
-          "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`)"
+          "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`) || Host(`${local.settings.fqdn}`)"
           "kind"  = "Rule"
-          "middlewares" = [
-            {
-              "name"      = "simplifier-middleware"
-              "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
-            }
-          ]
+          # "middlewares" = [
+          #   {
+          #     "name"      = "simplifier-middleware"
+          #     "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
+          #   }
+          # ]
           "services" = [
             {
               "name"      = kubernetes_service.simplifier_service.metadata.0.name
@@ -228,7 +222,7 @@ resource "kubernetes_manifest" "simplifier_route" {
   field_manager {
     force_conflicts = true
   }
-  depends_on = [helm_release.helm_traefik, kubernetes_manifest.simplifier_middleware]
+  depends_on = [helm_release.helm_traefik]
 }
 
 resource "kubernetes_manifest" "simplifier_route_tls" {
@@ -236,8 +230,8 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
     "apiVersion" = "traefik.containo.us/v1alpha1"
     "kind"       = "IngressRoute"
     "metadata" = {
-      name      = "simplifier-route-tls"
-      namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
+      "name"      = "simplifier-route-tls"
+      "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
     }
     "spec" = {
       # TODO: required? think not
@@ -250,15 +244,14 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
       ]
       "routes" = [
         {
-          "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`)"
+          "match" = "Host(`${azurerm_public_ip.simplifier.fqdn}`) || Host(`${local.settings.fqdn}`)"
           "kind"  = "Rule"
-          # TODO: required? think not
-          "middlewares" = [
-            {
-              "name"      = "simplifier-middleware"
-              "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
-            }
-          ]
+          # "middlewares" = [
+          #   {
+          #     "name"      = "simplifier-middleware"
+          #     "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
+          #   }
+          # ]
           "services" = [
             {
               "name"      = kubernetes_service.simplifier_service.metadata.0.name
@@ -275,5 +268,5 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
   field_manager {
     force_conflicts = true
   }
-  depends_on = [helm_release.helm_traefik, kubernetes_manifest.simplifier_middleware]
+  depends_on = [helm_release.helm_traefik]
 }

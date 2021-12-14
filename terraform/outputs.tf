@@ -6,6 +6,14 @@ output "resource_group_name" {
   value = azurerm_resource_group.resource_group.name
 }
 
+output "aks_cluster_node_resource_group" {
+  value = azurerm_kubernetes_cluster.aks_cluster.node_resource_group
+}
+
+output "aks_cluster_effective_outbound_ips" {
+  value = azurerm_kubernetes_cluster.aks_cluster.network_profile.0.load_balancer_profile.0.effective_outbound_ips
+}
+
 output "aks_cluster_name" {
   value = azurerm_kubernetes_cluster.aks_cluster.name
 }
@@ -14,20 +22,20 @@ output "aks_cluster_fqdn" {
   value = azurerm_kubernetes_cluster.aks_cluster.fqdn
 }
 
-output "aks_api_host" {
-  value = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
-}
+# output "aks_api_host" {
+#   value = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
+# }
 
 output "aks_kube_config" {
-  value     = azurerm_kubernetes_cluster.aks_cluster.kube_config
   sensitive = true
+  value     = azurerm_kubernetes_cluster.aks_cluster.kube_config
 }
 
-output "aks_versions" {
-  value = data.azurerm_kubernetes_service_versions.current.versions
-}
+# output "aks_versions" {
+#   value = data.azurerm_kubernetes_service_versions.current.versions
+# }
 
-output "aks_latest_version" {
+output "aks_cluster_kubernetes_latest_version" {
   value = data.azurerm_kubernetes_service_versions.current.latest_version
 }
 
@@ -40,7 +48,7 @@ output "simplifier_ip_address" {
 }
 
 output "simplifier_fqdn" {
-  value = azurerm_dns_a_record.simplifier_dns_a_record.fqdn
+  value = local.settings.fqdn
 }
 
 output "mariadb_fqdn" {

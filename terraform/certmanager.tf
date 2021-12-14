@@ -1,16 +1,16 @@
 # https://artifacthub.io/packages/helm/cert-manager/cert-manager
 resource "helm_release" "helm_cert_manager" {
-  name       = "cert-manager"
-  namespace  = "cert-manager"
-  repository = "https://charts.jetstack.io"
-  chart      = "cert-manager"
-  atomic     = true
-  #cleanup_on_fail   = true
+  name              = "cert-manager"
+  namespace         = "cert-manager"
+  repository        = "https://charts.jetstack.io"
+  chart             = "cert-manager"
+  atomic            = true
   create_namespace  = true
   dependency_update = true
   max_history       = 5
   timeout           = 300
   wait_for_jobs     = true
+  recreate_pods     = true
 
   # https://github.com/jetstack/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
   values = [jsonencode({
@@ -19,6 +19,22 @@ resource "helm_release" "helm_cert_manager" {
     #     enabled     = true
     #     useAppArmor = true
     #   }
+    # }
+
+    # # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+    # podDnsPolicy = "None"
+    # podDnsConfig = {
+    #   nameservers = [
+    #     "10.0.0.10",
+    #     "40.90.4.7",
+    #     "8.8.8.8",
+    #   ]
+    #   searches = [
+    #     local.settings.dns_suffix,
+    #   ]
+    #   options = [
+    #     "edns0",
+    #   ]
     # }
 
     prometheus = {
@@ -51,9 +67,10 @@ resource "kubernetes_manifest" "simplifier_cluster_issuer" {
 
     spec = {
       acme = {
+        # TODO: abstraction
         email  = "admins@simplifier.io"
-        server = "https://acme-v02.api.letsencrypt.org/directory"
-        #server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        #server = "https://acme-v02.api.letsencrypt.org/directory"
+        server = "https://acme-staging-v02.api.letsencrypt.org/directory"
         privateKeySecretRef = {
           name = "simplifier-cluster-issuer"
         }

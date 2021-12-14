@@ -9,6 +9,53 @@ resource "kubernetes_namespace" "simplifier_namespace" {
   depends_on = [azurerm_kubernetes_cluster.aks_cluster]
 }
 
+resource "kubernetes_limit_range" "aks_limit_range" {
+  metadata {
+    name      = "${local.settings.name}-limit-range"
+    namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
+    labels    = local.tags
+  }
+
+  spec {
+    limit {
+      type = "Pod"
+      max = {
+        cpu    = "8"
+        memory = "16Gi"
+      }
+    }
+    limit {
+      type = "Container"
+      default_request = {
+        cpu    = "100m"
+        memory = "100Mi"
+      }
+    }
+    limit {
+      type = "PersistentVolumeClaim"
+      min = {
+        storage = "500G"
+      }
+    }
+  }
+}
+
+# resource "kubernetes_pod_disruption_budget" "simplifier_pdb" {
+#   metadata {
+#     name      = "${local.settings.customer}-${local.settings.environment}-pdb"
+#     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
+#     labels    = local.tags
+#   }
+#   spec {
+#     max_unavailable = "50%"
+#     selector {
+#       match_labels = {
+#         k8s-app = local.tags.k8s-app
+#       }
+#     }
+#   }
+# }
+
 resource "kubernetes_secret" "simplifier_secret" {
   metadata {
     name      = "simplifier-secret"
@@ -20,7 +67,7 @@ resource "kubernetes_secret" "simplifier_secret" {
     db_name      = azurerm_mariadb_database.simplifier_database.name
     db_pass      = azurerm_mariadb_server.simplifier_mariadb.administrator_login_password
     db_user      = "${azurerm_mariadb_server.simplifier_mariadb.administrator_login}@${azurerm_mariadb_server.simplifier_mariadb.fqdn}"
-    virtual_host = azurerm_public_ip.simplifier.fqdn
+    virtual_host = local.settings.fqdn
   }
 }
 
@@ -30,12 +77,13 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
     # TODO: rename
     name      = "simplifier-set"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-    labels    = merge(local.tags, local.additional_set_tags)
+    # add aditional labels to the set
+    labels = merge(local.tags, local.additional_set_tags)
   }
 
   timeouts {
     create = "10m"
-    update = "10m"
+    update = "7m"
   }
 
   spec {
@@ -64,6 +112,8 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
       }
       spec {
         # TODO: try xfs
+        # storage_class_name = "simplifier-xfs"
+        # access_modes       = ["ReadWriteOnce"]
         storage_class_name = "managed-csi-premium"
         access_modes       = ["ReadWriteOnce"]
         # storage_class_name = "simplifier-many"
@@ -91,10 +141,6 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
           termination_message_policy = "FallbackToLogsOnError"
 
           resources {
-            # limits = {
-            #   cpu    = "4"
-            #   memory = "16Gi"
-            # }
             requests = {
               cpu    = "500m"
               memory = "4Gi"
@@ -212,7 +258,7 @@ resource "kubernetes_service" "simplifier_service" {
     name      = "simplifier-service"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
-    # same subnet, please
+    # important: https://docs.microsoft.com/en-us/azure/aks/internal-lb
     annotations = {
       "service.beta.kubernetes.io/azure-load-balancer-internal" = "true"
     }
@@ -237,17 +283,19 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
 
+    # look ma, it's 2022
     annotations = {
       "kubernetes.io/ingress.class"                         = "traefik"
       "cert-manager.io/acme-challenge-type"                 = "http01"
       "cert-manager.io/cluster-issuer"                      = "simplifier-cluster-issuer"
-      "cert-manager.io/dns-names"                           = azurerm_public_ip.simplifier.fqdn
+      "cert-manager.io/dns-names"                           = "${local.settings.fqdn},${azurerm_public_ip.simplifier.fqdn}"
       "traefik.ingress.kubernetes.io/frontend-entry-points" = "web,websecure"
-      "traefik.ingress.kubernetes.io/redirect-entry-point"  = "websecure"
-      "traefik.ingress.kubernetes.io/redirect-permanent"    = true
-      "traefik.ingress.kubernetes.io/router.entrypoints"    = "web,websecure"
-      "traefik.ingress.kubernetes.io/router.middlewares"    = "testing-dev-simplifier-middleware@kubernetescrd"
-      "traefik.ingress.kubernetes.io/router.tls"            = true
+      # TODO: check
+      "traefik.ingress.kubernetes.io/redirect-entry-point" = "web"
+      "traefik.ingress.kubernetes.io/redirect-permanent"   = true
+      "traefik.ingress.kubernetes.io/router.entrypoints"   = "web,websecure"
+      "traefik.ingress.kubernetes.io/router.middlewares"   = "testing-dev-simplifier-middleware@kubernetescrd"
+      "traefik.ingress.kubernetes.io/router.tls"           = true
     }
   }
 
@@ -258,7 +306,7 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
     }
 
     rule {
-      host = azurerm_public_ip.simplifier.fqdn
+      #host = local.settings.fqdn
       http {
         path {
           path = "/"
@@ -271,7 +319,7 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
     }
 
     tls {
-      hosts       = ["${azurerm_public_ip.simplifier.fqdn}"]
+      hosts       = ["${local.settings.fqdn}", "${azurerm_public_ip.simplifier.fqdn}"]
       secret_name = "simplifier-certificate"
     }
   }
