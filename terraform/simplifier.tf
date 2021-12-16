@@ -1,4 +1,4 @@
-disk "kubernetes_namespace" "simplifier_namespace" {
+resource "kubernetes_namespace" "simplifier_namespace" {
   metadata {
     name = "${local.settings.customer}-${local.settings.environment}"
     annotations = {
@@ -11,7 +11,7 @@ disk "kubernetes_namespace" "simplifier_namespace" {
 
 resource "kubernetes_limit_range" "aks_limit_range" {
   metadata {
-    name      = "${local.settings.name}-limit-range"
+    name = "${local.settings.name}-limit-range"
     # limit range in context of namespace
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags

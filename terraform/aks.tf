@@ -31,11 +31,11 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     # allow auto-upgrade
     orchestrator_version = data.azurerm_kubernetes_service_versions.current.latest_version
 
+    # TODO: test and enable?
+    #os_disk_type   = "Ephemeral"
     enable_host_encryption = true
     ultra_ssd_enabled      = true
     os_disk_size_gb        = local.settings.os_disk_size_gb
-    # TODO: test and enable?
-    #os_disk_type   = "Ephemeral"
     vm_size        = local.settings.linux_nodes_sku
     vnet_subnet_id = azurerm_subnet.simplifier.id
 

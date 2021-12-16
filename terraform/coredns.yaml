@@ -1,42 +1,30 @@
----
-# https://docs.microsoft.com/en-us/azure/aks/coredns-custom
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: coredns-custom
-  namespace: kube-system
-data:
-  Corefile.override: |
-        forward . 8.8.8.8 8.8.4.4
-  azure.server: |
-    cloudapp.azure.com:53 {
-        errors
-        cache 30
-        proxy . 168.63.129.16
-    }
-  simplifier.server: | # you may select any name here, but it must end with the .server file extension
-    aks.simplifier.io:53 {
-        errors
-        cache 30
-        proxy . 40.90.4.7
-    }
-#    simplifier.override: |
-#        hosts { 
-#            20.76.164.202 testing-dev.westeurope.cloudapp.azure.com
-#            fallthrough
-#        }
 # ---
+# # https://docs.microsoft.com/en-us/azure/aks/coredns-custom
 # apiVersion: v1
 # kind: ConfigMap
 # metadata:
-#   name: kube-dns
+#   name: coredns-custom
 #   namespace: kube-system
 # data:
-#   stubDomains: |
-#     {"aks.simplifier.io": ["40.90.4.7"]},
-#     {"cloudapp.azure.com": ["168.63.129.16"]}
-#   upstreamNameservers: |
-#     ["8.8.8.8", "8.8.4.4"]
+#   Corefile.override: |
+#     forward . 8.8.8.8 8.8.4.4
+#   simplifier.server: |
+#     aks.simplifier.io:53 {
+#       errors
+#       cache 5
+#       forward . 40.90.4.7
+#     }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-dns
+  namespace: kube-system
+data:
+  stubDomains: |
+    {"aks.simplifier.io": ["40.90.4.7"]},
+  upstreamNameservers: |
+    ["8.8.8.8", "8.8.4.4"]
 # ---
 # apiVersion: v1
 # kind: ConfigMap
