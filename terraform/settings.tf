@@ -9,14 +9,23 @@ locals {
     dns_prefix      = ""
     subscription_id = ""
 
-    # TODO: gather from user identity
     creator         = "DevOp"
     customer        = "testing"
     dns_suffix      = "aks.simplifier.io"
-    image           = "simplifierag/runtime:6.5"
-    linux_nodes_sku = "Standard_B4ms"
+    dns_zone_server = "40.90.4.7"
+
+    # FIXME: "latest" tags was not updated
+    image = "simplifierag/runtime:6.5"
+
+    maintenance_window_day   = "Tuesday"
+    maintenance_window_hours = [2, 3, 4]
+
+    # https://docs.microsoft.com/en-us/azure/virtual-machines/ephemeral-os-disks#size-requirements
+    # linux_nodes_sku = "Standard_B4ms"
+    linux_nodes_sku = "Standard_DS3_v2"
     location        = "westeurope"
     os_disk_size_gb = 30
+    aks_sku_tier    = "Free"
   }
 
   # ingest yaml at 'environments/workspace.yaml' for per-environment settings
@@ -26,19 +35,23 @@ locals {
     # compose
     name = "aks-${local.current.customer}-${lower(local.current.environment)}"
 
-    dns_suffix = local.current.dns_suffix
-    dns_prefix = "${lower(local.current.customer)}-${lower(local.current.environment)}"
-    fqdn       = "${lower(local.current.customer)}-${lower(local.current.environment)}.${local.current.dns_suffix}"
+    dns_suffix      = local.current.dns_suffix
+    dns_zone_server = local.current.dns_zone_server
+    dns_prefix      = "${lower(local.current.customer)}-${lower(local.current.environment)}"
+    fqdn            = "${lower(local.current.customer)}-${lower(local.current.environment)}.${local.current.dns_suffix}"
 
     # copy
-    creator         = local.current.creator
-    customer        = local.current.customer
-    environment     = local.current.environment
-    image           = local.current.image
-    linux_nodes_sku = local.current.linux_nodes_sku
-    location        = local.current.location
-    os_disk_size_gb = local.current.os_disk_size_gb
-    subscription_id = local.current.subscription_id
+    aks_sku_tier             = local.current.aks_sku_tier
+    creator                  = local.current.creator
+    customer                 = local.current.customer
+    environment              = local.current.environment
+    image                    = local.current.image
+    linux_nodes_sku          = local.current.linux_nodes_sku
+    location                 = local.current.location
+    maintenance_window_day   = local.current.maintenance_window_day
+    maintenance_window_hours = local.current.maintenance_window_hours
+    os_disk_size_gb          = local.current.os_disk_size_gb
+    subscription_id          = local.current.subscription_id
   }
 }
 
@@ -56,5 +69,4 @@ locals {
     "addonmanager.kubernetes.io/mode" = "Reconcile"
     "kubernetes.io/cluster-service"   = "true"
   }
-
 }

@@ -10,9 +10,9 @@ resource "azurerm_log_analytics_workspace" "aks_logworkspace" {
 }
 
 resource "azurerm_log_analytics_solution" "aks_logworkspace_solution" {
-  location              = azurerm_resource_group.resource_group.location
-  resource_group_name   = azurerm_resource_group.resource_group.name
-  tags                  = local.tags
+  location            = azurerm_resource_group.resource_group.location
+  resource_group_name = azurerm_resource_group.resource_group.name
+  tags                = local.tags
 
   solution_name         = "Containers"
   workspace_resource_id = azurerm_log_analytics_workspace.aks_logworkspace.id
@@ -35,6 +35,6 @@ resource "azurerm_monitor_private_link_scoped_service" "aks_logworkspace_scoped_
   name                = "${local.settings.name}-log-scoped-service"
   resource_group_name = azurerm_resource_group.resource_group.name
 
-  scope_name          = azurerm_monitor_private_link_scope.aks_logworkspace_scope.name
-  linked_resource_id  = azurerm_log_analytics_workspace.aks_logworkspace.id
+  scope_name         = azurerm_monitor_private_link_scope.aks_logworkspace_scope.name
+  linked_resource_id = azurerm_log_analytics_workspace.aks_logworkspace.id
 }

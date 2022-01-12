@@ -13,29 +13,23 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
   kubernetes_version        = data.azurerm_kubernetes_service_versions.current.latest_version
   automatic_channel_upgrade = "stable"
-  # TODO: abstraction (devel..prod)
-  #sku_tier                  = "Paid"
+  sku_tier                  = local.settings.aks_sku_tier
 
-  # TODO: abstraction
   maintenance_window {
     allowed {
-      day   = "Tuesday"
-      hours = [2, 3, 4]
+      day   = local.settings.maintenance_window_day
+      hours = local.settings.maintenance_window_hours
     }
   }
-
-  # TODO: https://docs.microsoft.com/en-us/azure/aks/use-pod-security-policies
 
   default_node_pool {
     name = "default"
     # allow auto-upgrade
     orchestrator_version = data.azurerm_kubernetes_service_versions.current.latest_version
 
-    # TODO: test and enable?
-    #os_disk_type   = "Ephemeral"
-    enable_host_encryption = true
-    ultra_ssd_enabled      = true
-    os_disk_size_gb        = local.settings.os_disk_size_gb
+    os_disk_type    = "Ephemeral"
+    os_disk_size_gb = local.settings.os_disk_size_gb
+
     vm_size        = local.settings.linux_nodes_sku
     vnet_subnet_id = azurerm_subnet.simplifier.id
 
@@ -45,7 +39,8 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     # TODO: test and enable?
     #availability_zones  = ["1", "2"]
     #type                = "VirtualMachineScaleSets"
-    availability_zones  = ["1"]
+    availability_zones = ["1"]
+
     node_count          = 1
     min_count           = 1
     max_count           = 4
@@ -62,7 +57,6 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
   }
 
   identity {
-    #type = "SystemAssigned"
     type                      = "UserAssigned"
     user_assigned_identity_id = azurerm_user_assigned_identity.aks_identity.id
   }
@@ -87,13 +81,6 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
 
   role_based_access_control {
     enabled = false
-    # enabled = true
-    # azure_active_directory {
-    #   managed                = true
-    #   # FIXME: https://portal.azure.com/#blade/Microsoft_AAD_IAM/GroupDetailsMenuBlade/Properties/groupId/65cf14c3-0c57-4813-9ac5-10b1ff98612b
-    #   #admin_group_object_ids = [azuread_group.admin_group.id]
-    #   admin_group_object_ids = ["65cf14c3-0c57-4813-9ac5-10b1ff98612b"]
-    # }
   }
 
   addon_profile {
@@ -129,4 +116,28 @@ resource "local_file" "aks_kubeconfig" {
   content         = azurerm_kubernetes_cluster.aks_cluster.kube_config_raw
   file_permission = "0600"
   depends_on      = [azurerm_kubernetes_cluster.aks_cluster]
+}
+
+# this is required for pods to allow public dns to resolve the certificates we request from letsencrypt
+# FIXME: subdomain hardcoded
+resource "kubernetes_manifest" "configmap_kube_system_kube_dns" {
+  manifest = {
+    "apiVersion" = "v1"
+    "data" = {
+      "stubDomains"         = <<-EOT
+      {"${local.settings.dns_suffix}": ["${azurerm_public_ip.simplifier.ip_address}"]}
+
+      EOT
+      "upstreamNameservers" = <<-EOT
+      ["8.8.8.8", "8.8.4.4"]
+
+      EOT
+    }
+    "kind" = "ConfigMap"
+    "metadata" = {
+      "name"      = "kube-dns"
+      "namespace" = "kube-system"
+    }
+  }
+  depends_on = [azurerm_kubernetes_cluster.aks_cluster]
 }

@@ -21,8 +21,8 @@ resource "kubernetes_limit_range" "aks_limit_range" {
     limit {
       type = "Pod"
       max = {
-        cpu    = "8"
-        memory = "16Gi"
+        cpu    = "4"
+        memory = "14Gi"
       }
     }
     limit {
@@ -34,28 +34,12 @@ resource "kubernetes_limit_range" "aks_limit_range" {
     }
     limit {
       type = "PersistentVolumeClaim"
-      min = {
-        storage = "500G"
+      max = {
+        storage = "120G"
       }
     }
   }
 }
-
-# resource "kubernetes_pod_disruption_budget" "simplifier_pdb" {
-#   metadata {
-#     name      = "${local.settings.customer}-${local.settings.environment}-pdb"
-#     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
-#     labels    = local.tags
-#   }
-#   spec {
-#     max_unavailable = "50%"
-#     selector {
-#       match_labels = {
-#         k8s-app = local.tags.k8s-app
-#       }
-#     }
-#   }
-# }
 
 resource "kubernetes_secret" "simplifier_secret" {
   metadata {
@@ -112,14 +96,10 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         labels = local.tags
       }
       spec {
-        storage_class_name = "managed-csi-premium"
+        # FIXME: check
+        # storage_class_name = "managed-csi-premium"
+        storage_class_name = "managed"
         access_modes       = ["ReadWriteOnce"]
-
-        # storage_class_name = "simplifier-xfs"
-        # access_modes       = ["ReadWriteOnce"]
-
-        # storage_class_name = "simplifier-many"
-        # access_modes       = ["ReadWriteMany"]
 
         resources {
           requests = {
@@ -147,6 +127,10 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
             requests = {
               cpu    = "500m"
               memory = "4Gi"
+            }
+            limits = {
+              cpu    = "4"
+              memory = "14Gi"
             }
           }
 
@@ -280,13 +264,13 @@ resource "kubernetes_service" "simplifier_service" {
   }
 }
 
-resource "kubernetes_ingress" "simplifier_traefik_ingress" {
+resource "kubernetes_ingress_v1" "simplifier_traefik_ingress" {
   metadata {
     name      = "simplifier-ingress"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     labels    = local.tags
 
-    # look ma, it's 2022
+    # look ma, it's 2022 :)
     annotations = {
       "kubernetes.io/ingress.class"                         = "traefik"
       "cert-manager.io/acme-challenge-type"                 = "http01"
@@ -303,19 +287,27 @@ resource "kubernetes_ingress" "simplifier_traefik_ingress" {
   }
 
   spec {
-    backend {
-      service_name = kubernetes_service.simplifier_service.metadata.0.name
-      service_port = 8080
+    default_backend {
+      service {
+        name = kubernetes_service.simplifier_service.metadata.0.name
+        port {
+          number = kubernetes_service.simplifier_service.spec.0.port.0.port
+        }
+      }
     }
 
     rule {
-      #host = local.settings.fqdn
+      #host = local.settings.fqdn # not setting 'host' matches all
       http {
         path {
           path = "/"
           backend {
-            service_name = kubernetes_service.simplifier_service.metadata.0.name
-            service_port = 8080
+            service {
+              name = kubernetes_service.simplifier_service.metadata.0.name
+              port {
+                number = kubernetes_service.simplifier_service.spec.0.port.0.port
+              }
+            }
           }
         }
       }

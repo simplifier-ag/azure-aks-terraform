@@ -10,7 +10,6 @@ resource "helm_release" "helm_cert_manager" {
   max_history       = 5
   timeout           = 300
   wait_for_jobs     = true
-  #recreate_pods     = true
 
   # https://github.com/jetstack/cert-manager/blob/master/deploy/charts/cert-manager/values.yaml
   values = [jsonencode({

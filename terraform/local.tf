@@ -35,11 +35,13 @@ resource "null_resource" "az_feature_pod_security_policy_preview" {
   }
 }
 
-# resource "null_resource" "az_feature_aks_natgateway_preview" {
-#   provisioner "local-exec" {
-#     command = "az feature register --namespace \"Microsoft.ContainerService\" --name \"AKS-NATGatewayPreview\""
-#   }
-# }
+
+resource "null_resource" "az_provider_register_compute" {
+  provisioner "local-exec" {
+    command = "az provider register --namespace \"Microsoft.Compute\""
+  }
+}
+
 
 resource "null_resource" "az_provider_register_container_service" {
   provisioner "local-exec" {

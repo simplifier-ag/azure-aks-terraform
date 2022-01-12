@@ -24,14 +24,14 @@ resource "azurerm_mariadb_server" "simplifier_mariadb" {
   tags = local.tags
 }
 
-# FIXME: conditional
+# warning: this will delete the database if the server exists
 resource "null_resource" "simplifier_database_delete" {
   provisioner "local-exec" {
     command = <<-EOT
       az mariadb db delete --yes --resource-group ${azurerm_resource_group.resource_group.name} --server-name ${azurerm_mariadb_server.simplifier_mariadb.name} --name ${azurerm_mariadb_database.simplifier_database.name}
     EOT
   }
-  # FIXME: depends_on
+  depends_on = [azurerm_mariadb_server.simplifier_mariadb]
 }
 
 resource "azurerm_mariadb_database" "simplifier_database" {

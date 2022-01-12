@@ -13,13 +13,12 @@ resource "helm_release" "helm_traefik" {
   dependency_update = true
   max_history       = 5
   timeout           = 300
-  #recreate_pods     = true
 
   values = [jsonencode({
-    # FIXME: tag
-    image = {
-      tag = "2.5.5"
-    }
+    # FIXME: tag?
+    # image = {
+    #   tag = "2.5.5"
+    # }
 
     global = {
       checkNewVersion    = false
@@ -72,21 +71,6 @@ resource "helm_release" "helm_traefik" {
       }
     }
 
-    # persistence = {
-    #   enabled      = true
-    #   storageClass = "simplifier-certs"
-    #   accessMode   = "ReadWriteMany"
-    #   subPath      = "traefik"
-    #   size         = "1Gi"
-    # }
-
-    # additionalArguments = [
-    #   "--api.insecure=true",
-    #   "--metrics.prometheus=false",
-    #   "--global.checknewversion=false",
-    #   "--global.sendanonymoususage=false",
-    # ]
-
     # allow binding ports below 1024 - traefik is our external load balancer
     securityContext = {
       capabilities = {
@@ -104,10 +88,6 @@ resource "helm_release" "helm_traefik" {
         cpu    = "250m"
         memory = "256Mi"
       }
-      # limits = {
-      #   cpu    = "500m"
-      #   memory = "512Mi"
-      # }
     }
   })]
   depends_on = [local_file.aks_kubeconfig]

@@ -7,7 +7,7 @@
 Install prerequisites:
 
 ```shell
-$ brew install azure-cli git helm kubectl terraform 
+$ brew install azure-cli git helm kubectl terraform
 ```
 
 Initialize:
@@ -20,6 +20,12 @@ Upgrade provider:
 
 ```shell
 $ terraform init -migrate-state -upgrade
+```
+
+Create workspace for "dev" environment:
+
+```shell
+$ terraform workspace new dev
 ```
 
 Authenticate for `API` use:
@@ -60,6 +66,7 @@ If not, we need to bring it up!
 ```shell
 $ terraform apply -target=azurerm_kubernetes_cluster.aks_cluster
 $ terraform apply -auto-approve -target=local_file.aks_kubeconfig
+$ helm repo update
 $ terraform apply -auto-approve -target=helm_release.helm_cert_manager
 $ terraform apply -auto-approve -target=helm_release.helm_traefik
 $ terraform apply
@@ -67,10 +74,10 @@ $ terraform apply
 
 Now, let's check the connectivity:
 
-```
+```shell
 $ kubectl version
-Client Version: version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.4", GitCommit:"b695d79d4f967c403a96986f1750a35eb75e75f1", GitTreeState:"clean", BuildDate:"2021-11-17T15:41:42Z", GoVersion:"go1.16.10", Compiler:"gc", Platform:"darwin/arm64"}
-Server Version: version.Info{Major:"1", Minor:"21", GitVersion:"v1.21.2", GitCommit:"32a137c122b0474c719988922410f4027a4b002e", GitTreeState:"clean", BuildDate:"2021-11-01T16:43:17Z", GoVersion:"go1.16.5", Compiler:"gc", Platform:"linux/amd64"}
+Client Version: version.Info{Major:"1", Minor:"23", GitVersion:"v1.23.1", GitCommit:"86ec240af8cbd1b60bcc4c03c20da9b98005b92e", GitTreeState:"clean", BuildDate:"2021-12-16T11:33:37Z", GoVersion:"go1.17.5", Compiler:"gc", Platform:"darwin/arm64"}
+Server Version: version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.4", GitCommit:"b695d79d4f967c403a96986f1750a35eb75e75f1", GitTreeState:"clean", BuildDate:"2021-11-18T19:30:35Z", GoVersion:"go1.16.10", Compiler:"gc", Platform:"linux/amd64"}
 ```
 
 The output will only have a `Server Version` line if the cluster is accessible.

@@ -1,2 +1,3 @@
 # prod
 subscription_id: ""
+aks_sku_tier: "Paid"

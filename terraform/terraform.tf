@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.0.10"
+  required_version = ">= 1.1"
 
   required_providers {
     local = {
@@ -17,7 +17,7 @@ terraform {
     # https://registry.terraform.io/providers/hashicorp/azurerm/latest
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 2.89.0"
+      version = "~> 2.91.0"
     }
     # https://registry.terraform.io/providers/microsoft/azuredevops/latest
     azuredevops = {
@@ -55,6 +55,8 @@ provider "kubernetes" {
 }
 
 provider "helm" {
+  repository_config_path = "${path.module}/.helm/repositories.yaml"
+  repository_cache       = "${path.module}/.helm"
   kubernetes {
     config_path = ".kubeconfig"
   }

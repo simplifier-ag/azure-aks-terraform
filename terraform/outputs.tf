@@ -22,18 +22,10 @@ output "aks_cluster_fqdn" {
   value = azurerm_kubernetes_cluster.aks_cluster.fqdn
 }
 
-# output "aks_api_host" {
-#   value = azurerm_kubernetes_cluster.aks_cluster.kube_config.0.host
-# }
-
 output "aks_kube_config" {
   sensitive = true
   value     = azurerm_kubernetes_cluster.aks_cluster.kube_config
 }
-
-# output "aks_versions" {
-#   value = data.azurerm_kubernetes_service_versions.current.versions
-# }
 
 output "aks_cluster_kubernetes_latest_version" {
   value = data.azurerm_kubernetes_service_versions.current.latest_version
