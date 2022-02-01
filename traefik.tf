@@ -139,7 +139,7 @@ resource "kubernetes_manifest" "simplifier_middleware" {
         accessControlExposeHeaders    = ["remainingTokenLifetime", "Content-Length", "Content-Range"]
         accessControlMaxAge           = 100
         addVaryHeader                 = true
-        frameDeny                     = true
+        frameDeny                     = false
       }
     }
   }
