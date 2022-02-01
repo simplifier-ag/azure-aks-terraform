@@ -1,7 +1,9 @@
 **~**
-**/.terraform/*
+*.DS_Store
 *.tfstate
 *.tfstate.*
-*.DS_Store
+.helm/*
 .idea
+.kubeconfig
+.terraform/*
 TODO.md

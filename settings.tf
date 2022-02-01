@@ -1,6 +1,5 @@
 locals {
-  # FIXME: move directory around
-  repo_rev = trimspace(file("../.git/${trimspace(trimprefix(file("../.git/HEAD"), "ref:"))}"))
+  repo_rev = trimspace(file(".git/${trimspace(trimprefix(file(".git/HEAD"), "ref:"))}"))
 
   default = {
     environment = terraform.workspace
