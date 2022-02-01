@@ -1,6 +1,8 @@
 # Simplifier on AKS
 
-**work in progress!**
+## Status
+
+This should get some more testing but is working fine as published in the repository.
 
 ## Prepare
 
