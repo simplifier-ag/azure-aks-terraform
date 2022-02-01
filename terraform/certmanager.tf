@@ -20,22 +20,6 @@ resource "helm_release" "helm_cert_manager" {
     #   }
     # }
 
-    # # https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
-    # podDnsPolicy = "None"
-    # podDnsConfig = {
-    #   nameservers = [
-    #     "10.0.0.10",
-    #     "40.90.4.7",
-    #     "8.8.8.8",
-    #   ]
-    #   searches = [
-    #     local.settings.dns_suffix,
-    #   ]
-    #   options = [
-    #     "edns0",
-    #   ]
-    # }
-
     prometheus = {
       enabled = false
     }
@@ -47,10 +31,6 @@ resource "helm_release" "helm_cert_manager" {
         cpu    = "250m"
         memory = "256Mi"
       }
-      # limits = {
-      #   cpu    = "500m"
-      #   memory = "512Mi"
-      # }
     }
   })]
   depends_on = [local_file.aks_kubeconfig]
@@ -66,10 +46,8 @@ resource "kubernetes_manifest" "simplifier_cluster_issuer" {
 
     spec = {
       acme = {
-        # TODO: abstraction
-        email = "admins@simplifier.io"
-        #server = "https://acme-v02.api.letsencrypt.org/directory"
-        server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        email  = local.settings.letsencrypt_email
+        server = local.settings.letsencrypt_server
         privateKeySecretRef = {
           name = "simplifier-cluster-issuer"
         }

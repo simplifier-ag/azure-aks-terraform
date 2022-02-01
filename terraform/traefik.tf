@@ -15,11 +15,6 @@ resource "helm_release" "helm_traefik" {
   timeout           = 300
 
   values = [jsonencode({
-    # FIXME: tag?
-    # image = {
-    #   tag = "2.5.5"
-    # }
-
     global = {
       checkNewVersion    = false
       sendAnonymousUsage = false
@@ -57,8 +52,7 @@ resource "helm_release" "helm_traefik" {
 
     providers = {
       kubernetesIngress = {
-        enabled = true
-        #allowExternalNameServices = true
+        enabled    = true
         namespaces = [] # all
       }
       kubernetesCRD = {
@@ -66,8 +60,7 @@ resource "helm_release" "helm_traefik" {
         ingressClass = "traefik"
         # yes, we cross namespaces
         allowCrossNamespace = true
-        #allowExternalNameServices = true
-        namespaces = [] # all
+        namespaces          = [] # all
       }
     }
 
@@ -109,7 +102,6 @@ resource "kubernetes_network_policy" "simplifier_network_policy" {
         values   = ["${local.tags.k8s-app}"]
       }
     }
-
     ingress {
       ports {
         port     = "http"
@@ -119,12 +111,6 @@ resource "kubernetes_network_policy" "simplifier_network_policy" {
         port     = "https"
         protocol = "TCP"
       }
-
-      # from {
-      #   ip_block {
-      #     cidr = "0.0.0.0/0"
-      #   }
-      # }
     }
 
     # allow all
@@ -146,7 +132,6 @@ resource "kubernetes_manifest" "simplifier_middleware" {
 
     spec = {
       headers = {
-        #accessControlAllowOrigin      = "origin-list-or-null"
         accessControlAllowCredentials = true
         accessControlAllowHeaders     = ["simplifiertoken", "simplifierapp", "User-Agent", "Content-Type", "Range"]
         accessControlAllowMethods     = ["GET", "POST", "OPTIONS", "PATCH", "PUT"]
@@ -208,10 +193,8 @@ resource "kubernetes_manifest" "simplifier_route_tls" {
       "namespace" = kubernetes_namespace.simplifier_namespace.metadata.0.name
     }
     "spec" = {
-      # TODO: required? think not
       "tls" = {
         "secretName" = "simplifier-certificate"
-        #"certResolver" = "letsencrypt"
       }
       "entryPoints" = [
         "websecure"

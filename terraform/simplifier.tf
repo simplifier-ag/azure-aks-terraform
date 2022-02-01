@@ -59,7 +59,6 @@ resource "kubernetes_secret" "simplifier_secret" {
 # https://community.simplifier.io/doc/installation-instructions/installation/docker-image-configuration/
 resource "kubernetes_stateful_set" "simplifier_stateful_set" {
   metadata {
-    # TODO: rename
     name      = "simplifier-set"
     namespace = kubernetes_namespace.simplifier_namespace.metadata.0.name
     # add aditional labels to the set
@@ -96,8 +95,6 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         labels = local.tags
       }
       spec {
-        # FIXME: check
-        # storage_class_name = "managed-csi-premium"
         storage_class_name = "managed"
         access_modes       = ["ReadWriteOnce"]
 
@@ -119,7 +116,7 @@ resource "kubernetes_stateful_set" "simplifier_stateful_set" {
         container {
           name                       = "simplifier-app"
           image                      = local.settings.image
-          image_pull_policy          = "IfNotPresent"
+          image_pull_policy          = local.settings.image_pull_policy
           termination_message_path   = "/opt/simplifier/data/termination_message.log"
           termination_message_policy = "FallbackToLogsOnError"
 

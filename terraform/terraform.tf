@@ -17,7 +17,7 @@ terraform {
     # https://registry.terraform.io/providers/hashicorp/azurerm/latest
     azurerm = {
       source  = "hashicorp/azurerm"
-      version = "~> 2.91.0"
+      version = "~> 2.94.0"
     }
     # https://registry.terraform.io/providers/microsoft/azuredevops/latest
     azuredevops = {
@@ -31,7 +31,6 @@ terraform {
     }
   }
 
-  # TODO: can this take variables, somehow?
   backend "azurerm" {
     subscription_id      = "7b1e7ea6-c85c-4cb9-b358-fa9d61807ce7"
     resource_group_name  = "terraform-aks"

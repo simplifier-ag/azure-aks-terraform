@@ -119,7 +119,6 @@ resource "local_file" "aks_kubeconfig" {
 }
 
 # this is required for pods to allow public dns to resolve the certificates we request from letsencrypt
-# FIXME: subdomain hardcoded
 resource "kubernetes_manifest" "configmap_kube_system_kube_dns" {
   manifest = {
     "apiVersion" = "v1"
