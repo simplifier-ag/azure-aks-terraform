@@ -9,31 +9,33 @@ This should get some more testing but is working fine as published in the reposi
 Install prerequisites:
 
 ```shell
-$ brew install azure-cli git helm kubectl terraform
+brew install azure-cli git helm kubectl terraform
 ```
 
 Initialize:
 
 ```shell
-$ terraform init -upgrade
+terraform init -upgrade
 ```
 
 Upgrade provider:
 
 ```shell
-$ terraform init -migrate-state -upgrade
+terraform init -migrate-state -upgrade
 ```
 
 Create workspace for "dev" environment:
 
 ```shell
-$ terraform workspace new dev
+terraform workspace new dev
 ```
+
+## Authentication
 
 Authenticate for `API` use:
 
 ```shell
-$ az login
+az login
 The default web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. Please continue the login in the web browser. If no web browser is available or if the webbrowser fails to open, use device code flow with `az login --use-device-code`.
 [
   {
@@ -56,28 +58,34 @@ The default web browser has been opened at https://login.microsoftonline.com/org
 If the cluster is up already you can simply get it's configuration:
 
 ```shell
-$ az aks get-credentials --resource-group aks-testing-dev-rg --name aks-testing-dev --file .kubeconfig
+az aks get-credentials --resource-group aks-testing-dev-rg --name aks-testing-dev --file .kubeconfig
 ```
 
-Please adjust the parameters accordingly if required.
+In case you have many subscriptions please select the according one:
+
+```
+az account set --subscription 7b1e7ea6-c85c-4cb9-b358-ef9d03807ce1
+```
+
+There are many more [useful commands](https://docs.microsoft.com/en-us/cli/azure/aks).
 
 ## Setup
 
 If not, we need to bring it up!
 
 ```shell
-$ terraform apply -target=azurerm_kubernetes_cluster.aks_cluster
-$ terraform apply -auto-approve -target=local_file.aks_kubeconfig
-$ helm repo update
-$ terraform apply -auto-approve -target=helm_release.helm_cert_manager
-$ terraform apply -auto-approve -target=helm_release.helm_traefik
-$ terraform apply
+terraform apply -target=azurerm_kubernetes_cluster.aks_cluster
+terraform apply -auto-approve -target=local_file.aks_kubeconfig
+helm repo update
+terraform apply -auto-approve -target=helm_release.helm_cert_manager
+terraform apply -auto-approve -target=helm_release.helm_traefik
+terraform apply
 ```
 
 Now, let's check the connectivity:
 
 ```shell
-$ kubectl version
+kubectl version
 Client Version: version.Info{Major:"1", Minor:"23", GitVersion:"v1.23.1", GitCommit:"86ec240af8cbd1b60bcc4c03c20da9b98005b92e", GitTreeState:"clean", BuildDate:"2021-12-16T11:33:37Z", GoVersion:"go1.17.5", Compiler:"gc", Platform:"darwin/arm64"}
 Server Version: version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.4", GitCommit:"b695d79d4f967c403a96986f1750a35eb75e75f1", GitTreeState:"clean", BuildDate:"2021-11-18T19:30:35Z", GoVersion:"go1.16.10", Compiler:"gc", Platform:"linux/amd64"}
 ```
@@ -87,5 +95,36 @@ The output will only have a `Server Version` line if the cluster is accessible.
 ### Traefik Dashboard
 
 ```shell
-$ kubectl port-forward $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000 -n traefik
+kubectl port-forward $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000 -n traefik
 ````
+
+## Operations
+
+Describe all (usually one) deployments (`statefulset`):
+
+```shell
+kubectl describe -n testing-dev statefulset
+Name:         simplifier-set-0
+Namespace:    testing-dev
+Priority:     0
+Node:         aks-default-30353788-vmss000000/10.13.1.5
+...
+```
+
+Describe the (currently one and only) pod:
+
+```shell
+kubectl describe -n testing-dev pod simplifier-set-0
+```
+
+Follow the pod's log:
+
+```shell
+kubectl logs -n testing-dev -f simplifier-set-0
+```
+
+Patch the image to use:
+
+```shell
+kubectl -n testing-dev patch statefulset simplifier-set --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value":"simplifierag/runtime:6.6"}]'
+```
