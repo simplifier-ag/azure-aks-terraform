@@ -1,4 +1,5 @@
 # https://github.com/traefik/traefik-helm-chart
+# https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
 # https://github.com/traefik/traefik-helm-chart/issues/208#issuecomment-670872105
 # https://github.com/traefik/traefik-helm-chart/issues/42#issuecomment-563474382
 # https://github.com/traefik/traefik/issues/7126
@@ -12,26 +13,28 @@ resource "helm_release" "helm_traefik" {
   create_namespace  = true
   dependency_update = true
   max_history       = 5
+  recreate_pods     = true
   timeout           = 300
 
   values = [jsonencode({
-    global = {
-      checkNewVersion    = false
-      sendAnonymousUsage = false
-    }
+    globalArguments = [
+      "--global.checknewversion",
+      "--global.sendanonymoususage"
+    ]
 
     logs = {
       general = {
-        level = "INFO"
+        level = "WARN"
+      }
+      access = {
+        enabled = true
+        # format = "json"
+        bufferingSize = 100
       }
     }
 
-    api = {
-      insecure = true
-    }
-
     metrics = {
-      prometheus = false
+      prometheus = []
     }
 
     ports = {
@@ -43,24 +46,28 @@ resource "helm_release" "helm_traefik" {
       }
     }
 
-    service = {
-      type = "LoadBalancer"
-      spec = {
-        loadBalancerIP = azurerm_public_ip.simplifier.ip_address
-      }
-    }
-
     providers = {
-      kubernetesIngress = {
-        enabled    = true
-        namespaces = [] # all
-      }
       kubernetesCRD = {
         enabled      = true
         ingressClass = "traefik"
         # yes, we cross namespaces
         allowCrossNamespace = true
         namespaces          = [] # all
+      }
+      kubernetesIngress = {
+        enabled    = true
+        namespaces = [] # all
+      }
+    }
+
+    rbac = {
+      enabled = false
+    }
+
+    resources = {
+      requests = {
+        cpu    = "250m"
+        memory = "256Mi"
       }
     }
 
@@ -76,10 +83,10 @@ resource "helm_release" "helm_traefik" {
       runAsUser              = 0
     }
 
-    resources = {
-      requests = {
-        cpu    = "250m"
-        memory = "256Mi"
+    service = {
+      type = "LoadBalancer"
+      spec = {
+        loadBalancerIP = azurerm_public_ip.simplifier.ip_address
       }
     }
   })]
