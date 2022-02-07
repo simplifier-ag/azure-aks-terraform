@@ -63,7 +63,7 @@ az aks get-credentials --resource-group aks-testing-dev-rg --name aks-testing-de
 
 In case you have many subscriptions please select the according one:
 
-```
+```shell
 az account set --subscription 7b1e7ea6-c85c-4cb9-b358-ef9d03807ce1
 ```
 
