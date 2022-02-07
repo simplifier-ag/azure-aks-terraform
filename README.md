@@ -64,14 +64,14 @@ az aks get-credentials --resource-group aks-testing-dev-rg --name aks-testing-de
 In case you have many subscriptions please select the according one:
 
 ```shell
-az account set --subscription 7b1e7ea6-c85c-4cb9-b358-ef9d03807ce1
+az account set --subscription 7b1e7ea6-c85c-4cb9-b358-678351678291
 ```
 
 There are many more [useful commands](https://docs.microsoft.com/en-us/cli/azure/aks).
 
-## Setup
+## Installation
 
-If not, we need to bring it up!
+At the time of this writing `terraform` has issues resolving dependencies for `helm` charts right. Therefore, a sequential execution is required:
 
 ```shell
 terraform apply -target=azurerm_kubernetes_cluster.aks_cluster
@@ -92,13 +92,27 @@ Server Version: version.Info{Major:"1", Minor:"22", GitVersion:"v1.22.4", GitCom
 
 The output will only have a `Server Version` line if the cluster is accessible.
 
-### Traefik Dashboard
+## Operations
+
+### Traefik
+
+#### Dashboard
+
+Using a bit of shell substitution it's easy to access the dashboard without knowing the actual name of the pod:
 
 ```shell
-kubectl port-forward $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000 -n traefik
+kubectl port-forward -n traefik $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000
 ````
 
-## Operations
+#### Logs
+
+Following the log can give helpful diagnostics information:
+
+```shell
+kubectl logs -n traefik -f --selector "app.kubernetes.io/name=traefik"
+````
+
+#### Deployment
 
 Describe all (usually one) deployments (`statefulset`):
 
