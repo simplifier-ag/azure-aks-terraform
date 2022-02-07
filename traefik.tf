@@ -17,10 +17,26 @@ resource "helm_release" "helm_traefik" {
   timeout           = 300
 
   values = [jsonencode({
+    deployment = {
+      annotations = {
+        labels = jsonencode(local.tags)
+      }
+    }
+
     globalArguments = [
       "--global.checknewversion",
       "--global.sendanonymoususage"
     ]
+
+    ingressRoute = {
+      dashboard = {
+        enabled = true
+        annotations = {
+          "kubernetes.io/ingress.class" = "traefik"
+          labels                        = jsonencode(local.tags)
+        }
+      }
+    }
 
     logs = {
       general = {
