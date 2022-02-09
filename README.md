@@ -12,6 +12,8 @@ Install prerequisites:
 brew install azure-cli git helm kubectl terraform
 ```
 
+### Terraform
+
 Initialize:
 
 ```shell
@@ -54,6 +56,8 @@ The default web browser has been opened at https://login.microsoftonline.com/org
   }
 ]
 ```
+
+### `kubeconfig`
 
 If the cluster is up already you can simply get it's configuration:
 
