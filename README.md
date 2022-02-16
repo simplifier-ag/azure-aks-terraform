@@ -122,6 +122,14 @@ Following the log can give helpful diagnostics information:
 kubectl logs -n traefik -f --selector "app.kubernetes.io/name=traefik"
 ````
 
+#### Better Logs
+
+Please install [kail](https://github.com/boz/kail) first. Then, you can issue a "follow all in namespace" command:
+
+```shell
+kail -n testing-dev
+```
+
 #### Deployment
 
 Describe all (usually one) deployments (`statefulset`):
@@ -151,14 +159,4 @@ Patch the image to use:
 
 ```shell
 kubectl -n testing-dev patch statefulset simplifier-set --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value":"simplifierag/runtime:6.6"}]'
-```
-
-#### Following Logs
-
-Please install [kail](https://github.com/boz/kail) first. Then, you can issue a "follow all in namespace" command:
-
-```shell
-kail -n testing-dev
-```
-
 ```
