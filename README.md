@@ -124,7 +124,14 @@ kubectl logs -n traefik -f --selector "app.kubernetes.io/name=traefik"
 
 #### Better Logs
 
-Please install [kail](https://github.com/boz/kail) first. Then, you can issue a "follow all in namespace" command:
+Please install [kail](https://github.com/boz/kail#installing) first:
+
+```shell
+brew tap boz/repo
+brew install boz/repo/kail
+```
+
+Then, you can issue a "follow all in namespace" command:
 
 ```shell
 kail -n testing-dev
