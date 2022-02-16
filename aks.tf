@@ -27,7 +27,8 @@ resource "azurerm_kubernetes_cluster" "aks_cluster" {
     # allow auto-upgrade
     orchestrator_version = data.azurerm_kubernetes_service_versions.current.latest_version
 
-    os_disk_type    = "Ephemeral"
+    # https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/kubernetes_cluster#default_node_pool
+    os_disk_type    = "Managed"
     os_disk_size_gb = local.settings.os_disk_size_gb
 
     vm_size        = local.settings.linux_nodes_sku
