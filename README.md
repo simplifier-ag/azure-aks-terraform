@@ -108,6 +108,12 @@ Using a bit of shell substitution it's easy to access the dashboard without know
 kubectl port-forward -n traefik $(kubectl get pods --selector "app.kubernetes.io/name=traefik" --output=name -n traefik) 9000:9000
 ````
 
+You should be able to access the dashboard now via:
+
+```text
+http://127.0.0.1:9000/dashboard/
+```
+
 #### Logs
 
 Following the log can give helpful diagnostics information:
@@ -145,4 +151,14 @@ Patch the image to use:
 
 ```shell
 kubectl -n testing-dev patch statefulset simplifier-set --type='json' -p='[{"op": "replace", "path": "/spec/template/spec/containers/0/image", "value":"simplifierag/runtime:6.6"}]'
+```
+
+#### Following Logs
+
+Please install [kail](https://github.com/boz/kail) first. Then, you can issue a "follow all in namespace" command:
+
+```shell
+kail -n testing-dev
+```
+
 ```
